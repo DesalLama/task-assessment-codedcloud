@@ -10,6 +10,12 @@ Task 1. Containerized Litecoin Application
     a. Install Docker
     b. ECR (Elastic Container Registry)
 
+    Usage Example: Replace value inside <  >
+        - aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <aws_account_id>.dkr.ecr.<region>.amazonaws.com
+        - docker build -t <image_name> .
+        - docker tag <image_name>:latest <aws_account_id>.dkr.ecr.<region>.amazonaws.com/<repo_name>:latest
+        - docker push <aws_account_id>.dkr.ecr.<region>.amazonaws.com/<repo_name>:latest
+
 
 Task 2. Create Kubernetes manifests to deploy the Litecoin container
 
