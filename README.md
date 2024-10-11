@@ -24,7 +24,7 @@ Task 2. Create Kubernetes manifests to deploy the Litecoin container
         c. Install volume plugin for AWS EBS before applying < manifests/sc.yml > (Refer to Task Assessment documentation.pdf)
         d. Replace image and image tag value in < manifests/deploy.tmpl >. Change deploy.tmpl to deploy.yml
         e. Create image pull secret before applying manifests/deploy.tmpl and also change the name value with created secret name. 
-            To create secret:
+            To create secret: Replace value inside <  >
                 kubectl create secret docker-registry regcred --docker-server=<registry_name> --docker-username=AWS --docker-password=$(aws ecr get-login-password --region <region>)
 
             **Replace registry_name and region accordingly without <> in above command.
