@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litecoin-node
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: litecoin
+  template:
+    metadata:
+      labels:
+        app: litecoin
+    spec:
+      containers:
+      - name: litecoin
+        image: 455898688873.dkr.ecr.us-east-1.amazonaws.com/demo:$IMAGE_TAG  # Replace with the actual Litecoin image
+        ports:
+          - containerPort: 9333  # Default port for Litecoin
+        volumeMounts:
+          - mountPath: /root/.litecoin
+            name: litecoin-storage
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "500m"
+          limits:
+            memory: "512Mi"
+            cpu: "1"
+      volumes:
+      - name: litecoin-storage
+        persistentVolumeClaim:
+          claimName: litecoin-data
+      imagePullSecrets:
+      - name:  regcred
+

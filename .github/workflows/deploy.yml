@@ -1,0 +1,104 @@
+name: Deploy Application to EKS
+
+on:
+  push:
+    branches:
+      - main
+env:
+  ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  IMAGE_TAG: ${{ github.sha }}
+  REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        run: |
+          aws ecr get-login-password --region ${{ env.REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REPOSITORY }}
+          echo $ECR_REGISTRY
+          docker build -t ${{ env.ECR_REPOSITORY }} .
+          docker tag ${{ env.ECR_REPOSITORY }}:latest ${{ env.ECR_REPOSITORY }}/${{ env.ECR_REGISTRY }}:${{ env.IMAGE_TAG }}
+          docker push ${{ env.ECR_REPOSITORY }}/${{ env.ECR_REGISTRY }}:${{ env.IMAGE_TAG }}
+          echo ${{ env.IMAGE_TAG }}
+            
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    # Step 1: Configure AWS credentials using GitHub Secrets
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+    # Step 2: Install kubectl and eksctl
+    - name: Install kubectl
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x ./kubectl
+        sudo mv ./kubectl /usr/local/bin/kubectl
+
+    # Step 3: Update kubeconfig to access EKS cluster
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig --name demo --region ${{ env.REGION }}
+
+    - name: Check if first deployment
+      id: check-first-deployment
+      run: |
+        if [ ! -f .first_deployment_done ]; then
+           echo "First deployment"
+           echo "::set-output name=first_deployment::true"
+        else
+           echo "Subsequent deployment"
+           echo "::set-output name=first_deployment::false"
+        fi
+
+    - name: Deploy all manifests (First time only)
+      if: steps.check-first-deployment.outputs.first_deployment == 'true'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
+      run: |
+        export IMAGE_TAG=${{ github.sha }}
+        envsubst < manifests/deploy.tmpl > manifests/deploy.yml
+        kubectl apply -f manifests/
+        touch .first_deployment_done
+        git config user.name "github-actions"
+        git config user.email "actions@github.com"
+        git add .first_deployment_done
+        git commit -m "Mark first deployment as done"
+        git push origin main
+
+    - name: Deploy deploy.yml (Subsequent deployments)
+      if: steps.check-first-deployment.outputs.first_deployment == 'false'
+      run: |
+        export IMAGE_TAG=${{ github.sha }}
+        envsubst < manifests/deploy.tmpl > manifests/deploy.yml
+        kubectl apply -f manifests/deploy.yml
