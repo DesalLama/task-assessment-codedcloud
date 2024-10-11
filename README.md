@@ -1,3 +1,6 @@
+#Fork the repository
+
+
 ## Task Assessment:
 
 #Prerequisites when manually applied, when no CICD used.
@@ -30,7 +33,7 @@ Task 3. Implement CICD pipeline for the application
         a. Add variable in github repository settings with name ECR_REGISTRY with repository name as value
         b. Add variable in github repository settings with name ECR_REPOSITORY with repository uri as value
         c. Add secret in github repository settings with name AWS_ACCESS_KEY_ID with AWS Access Key as value
-        d. Add secret in github repository settings with name AWS_ACCESS_KEY_ID with AWS Access Key as value
+        d. Add secret in github repository settings with name AWS_SECRET_ACCESS_KEY with AWS secret key as value
         e. Add secret in github repository settings with name AWS_DEFAULT_REGION with Region as value
         f. Add secret in github repository settings with name GIT_TOKEN with git token as value
 
